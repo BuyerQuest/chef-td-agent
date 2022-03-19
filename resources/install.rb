@@ -65,9 +65,24 @@ action :install do
       key 'https://packages.treasuredata.com/GPG-KEY-td-agent'
     end
   else
+    baseurl = case new_resource.major_version
+              when nil?,'1'
+                "http://packages.treasuredata.com/redhat/$basearch"
+              when '2','2.5'
+                "http://packages.treasuredata.com/#{new_resource.major_version}/redhat/$releasever/$basearch"
+              when '3'
+                case node['platform']
+                when 'amazon'
+                  "http://packages.treasuredata.com/#{new_resource.major_version}/#{node['platform']}/2/$releasever/$basearch"
+                else
+                  "http://packages.treasuredata.com/#{new_resource.major_version}/redhat/$releasever/$basearch"
+                end
+              else
+                "http://packages.treasuredata.com/#{new_resource.major_version}/#{platform?('amazon') ? 'amazon' : 'redhat'}/#{node['platform_version'].to_i}/$basearch"
+              end
     yum_repository 'treasure-data' do
       description 'TreasureData'
-      baseurl "http://packages.treasuredata.com/#{new_resource.major_version}/#{platform?('amazon') ? 'amazon' : 'redhat'}/#{node['platform_version'].to_i}/$basearch"
+      baseurl baseurl
       gpgkey 'https://packages.treasuredata.com/GPG-KEY-td-agent'
     end
   end
