@@ -1,9 +1,9 @@
 # To learn more about Custom Resources, see https://docs.chef.io/custom_resources/
 #
-# Cookbok Name:: td-agent
-# Resource:: td_agent_install
+# Cookbok Name:: fluentv5
+# Resource:: fluent_package_install
 #
-# Author:: Corey Hemminger <hemminger@hotmail.com>
+# Author:: Varis
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,153 +16,145 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-provides :td_agent_install
-resource_name :td_agent_install
-
-description 'Installs td-agent and creates default configuration'
-
+resource_name :fluent_package_install
+ 
+description 'Installs Fluentd package v5 and creates default configuration'
+ 
 property :major_version, String,
          name_property: true,
-         description: 'Major version of td-agent to install'
-
+         description: 'Major version of Fluentd to install'
+ 
 property :template_source, String,
          default: 'td-agent',
          description: 'Cookbook to source template from'
-
+ 
 property :default_config, [true, false],
          default: true,
-         description: 'Set default config in /etc/td-agent/td-agent.conf file'
-
+         description: 'Set default config in /etc/fluentd/fluentd.conf file'
+ 
 property :in_forward, Hash,
          default: {
            port: 24224,
-           bind: '0.0.0.0',
+           bind: '0.0.0.0'
          },
-         description: 'Port to listen for td-agent forwarded messages'
-
+         description: 'Port to listen for Fluentd forwarded messages'
+ 
 property :in_http, Hash,
          default: {
            port: 8888,
-           bind: '0.0.0.0',
+           bind: '0.0.0.0'
          },
          description: 'Setup HTTP site for diagnostics'
-
+ 
 property :api_key, String,
-         description: 'Adds api key for td cloud analytics'
-
+         description: 'Adds api key for Fluentd cloud analytics'
+ 
 property :plugins, [String, Hash, Array],
-         description: 'Plugins to install, fluent-plugin- auto added to plugin name, Hash can be used to specify gem_package options as key value pairs'
-
+         description: 'Plugins to install, fluent-plugin- auto added to plugin name'
+ 
 action :install do
-  description 'Installs td-agent from repository'
-
+  description 'Installs Fluentd from repository'
+ 
   if platform_family?('debian')
-    apt_repository 'treasure-data' do
-      uri "http://packages.treasuredata.com/#{new_resource.major_version}/#{node['platform']}/#{node['lsb']['codename']}/"
-      components ['contrib']
-      key 'https://packages.treasuredata.com/GPG-KEY-td-agent'
+    apt_repository 'fluent-package' do
+      url "https://packages.treasuredata.com/#{new_resource.major_version}/#{node['platform']}/#{node['platform_version']}/fluentd"
+      key 'https://packages.treasuredata.com/GPG-KEY-fluent-package'
     end
   else
     baseurl = case new_resource.major_version
-              when nil?,'1'
-                "http://packages.treasuredata.com/redhat/$basearch"
-              when '2','2.5'
-                "http://packages.treasuredata.com/#{new_resource.major_version}/redhat/$releasever/$basearch"
-              when '3'
-                case node['platform']
-                when 'amazon'
-                  "http://packages.treasuredata.com/#{new_resource.major_version}/#{node['platform']}/2/$releasever/$basearch"
-                else
-                  "http://packages.treasuredata.com/#{new_resource.major_version}/redhat/$releasever/$basearch"
-                end
+              when nil, '1'
+                "https://packages.treasuredata.com/amazon/2/$basearch"
+              when '5'
+                "https://packages.treasuredata.com/lts/5/amazon/2/$basearch"
               else
-                "http://packages.treasuredata.com/#{new_resource.major_version}/#{platform?('amazon') ? 'amazon' : 'redhat'}/#{node['platform_version'].to_i}/$basearch"
+                "https://packages.treasuredata.com/#{new_resource.major_version}/amazon/2/$basearch"
               end
-    yum_repository 'treasure-data' do
-      description 'TreasureData'
+ 
+    yum_repository 'treasuredata' do
+      description 'Treasuredate'
       baseurl baseurl
-      gpgkey 'https://packages.treasuredata.com/GPG-KEY-td-agent'
+      gpgkey 'https://packages.treasuredata.com/GPG-KEY-fluent-package,https://packages.treasuredata.com/GPG-KEY-td-agent'
+      action :create
     end
   end
 
-  package 'td-agent'
-
-  directory '/etc/td-agent/conf.d' do
-    owner 'td-agent'
-    group 'td-agent'
+  package 'fluent-package' do
+    action :install
+  end
+ 
+  directory '/etc/fluent/conf.d' do
+    owner 'fluentd'
+    group 'fluentd'
     mode '0755'
   end
 end
-
+ 
 action :remove do
-  description 'Removes td-agent and repository'
-
-  package 'td-agent' do
+  description 'Removes Fluentd and repository'
+ 
+  package 'fluent-package' do
     action :remove
   end
-
-  directory '/etc/td-agent' do
+ 
+  directory '/etc/fluentd' do
     recursive true
     action :delete
   end
-
+ 
   if platform_family?('debian')
-    apt_repository 'treasure-data' do
+    apt_repository 'fluent-package' do
       action :remove
     end
   else
-    yum_repository 'treasure-data' do
+    yum_repository 'fluent-package' do
       action :remove
     end
   end
 end
-
+ 
 action :configure do
   description 'Creates default configuration and installs plugins'
-
-  template '/etc/td-agent/td-agent.conf' do
-    cookbook new_resource.template_source
-    source 'td-agent.conf.erb'
-    variables(
-        major_version: new_resource.major_version,
-        default_config: new_resource.default_config,
-        in_forward: new_resource.in_forward,
-        in_http: new_resource.in_http,
-        api_key: new_resource.api_key
-      )
-    notifies :reload, 'service[td-agent]', :delayed
-  end
-
-  plugins = Mash.new
+ 
+  template '/etc/fluent/fluentd.conf' do
+  cookbook new_resource.template_source
+  source 'td-agent.conf.erb'
+  variables(
+      major_version: new_resource.major_version,
+      default_config: new_resource.default_config,
+      in_forward: new_resource.in_forward,
+      in_http: new_resource.in_http,
+      api_key: new_resource.api_key
+    )
+  notifies :reload, 'service[fluentd]', :delayed
+end
+ 
+plugins = Mash.new
   if new_resource.plugins.is_a?(String)
-    plugins[new_resource.plugins] = { gem_binary: '/usr/sbin/td-agent-gem' }
+    plugins[new_resource.plugins] = { gem_binary: '/usr/sbin/fluent-gem' }
   elsif new_resource.plugins.is_a?(Array)
-    new_resource.plugins&.each do |plugin|
-      plugins[plugin] = { gem_binary: '/usr/sbin/td-agent-gem' }
+    new_resource.plugins.each do |plugin|
+      plugins[plugin] = { gem_binary: '/usr/sbin/fluent-gem' }
     end
   else
-    new_resource.plugins&.each do |name, hash|
-      hash['gem_binary'] ||= '/usr/sbin/td-agent-gem'
+    new_resource.plugins.each do |name, hash|
+      hash['gem_binary'] ||= '/usr/sbin/fluent-gem'
       plugins[name] = hash
     end
   end
-  plugins&.each do |name, hash|
+ 
+  plugins.each do |name, hash|
     gem_package "fluent-plugin-#{name}" do
-      hash&.each do |key, value|
-        send(key, value)
-      end
-      notifies :restart, 'service[td-agent]', :delayed
+      gem_binary hash['gem_binary']
+      action :install
     end
   end
-
-  service 'td-agent' do
+  service 'fluentd' do
     supports restart: true, reload: true, status: true
     action [:enable, :start]
   end
 end
-
 action_class do
   include ::TdAgent::Helpers
 end
+

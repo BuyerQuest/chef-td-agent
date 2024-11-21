@@ -46,7 +46,7 @@ action :create do
   description 'Creates source configuration files'
   parameters = new_resource.parameters
 
-  template "/etc/td-agent/conf.d/#{new_resource.source_name}.conf" do
+  template "/etc/fluent/conf.d/#{new_resource.source_name}.conf" do
     source 'source.conf.erb'
     owner 'root'
     group 'root'
@@ -57,10 +57,10 @@ action :create do
       tag: new_resource.tag
     )
     cookbook new_resource.template_source
-    notifies :reload, 'service[td-agent]'
+    notifies :reload, 'service[fluentd]'
   end
 
-  service 'td-agent' do
+  service 'fluentd' do
     supports restart: true, reload: true, status: true
     action [:enable, :start]
   end

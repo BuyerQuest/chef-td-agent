@@ -29,12 +29,12 @@ platforms:
       provision_command:
         - systemctl enable sshd
 
-  - name: centos-7
-    driver_config:
-      image: dokken/centos-7
-      run_command: /usr/lib/systemd/systemd
-      provision_command:
-        - systemctl enable sshd
+  # - name: centos-7
+  #   driver_config:
+  #     image: dokken/centos-7
+  #     run_command: /usr/lib/systemd/systemd
+  #     provision_command:
+  #       - systemctl enable sshd
 
 suites:
 # - name: 1x-chef12

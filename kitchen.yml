@@ -1,26 +1,76 @@
+# ---
+# driver:
+#   name: vagrant
+
+<% 
+  require 'tkhelper' 
+  tkhelper = TKHelper.new
+%>
 ---
 driver:
-  name: vagrant
+  name: ec2
+  region: us-west-2
+  instance_type: t3.small
+  spot_price: on-demand
+  skip_cost_warning: true
+  shared_credentials_profile: bqsandbox
+  security_group_cidr_ip: <%= tkhelper.get_my_cidr %>
+  iam_profile_name: test-kitchen-ec2-role
+
+transport:
+  name: rsync
 
 provisioner:
   name: chef_zero
-  retry_on_exit_code:
-    - 35 # 35 is the exit code signaling that the node is rebooting
-  product_name: chef
-  product_version: 16
-  deprecations_as_errors: true
-  chef_license: accept-no-persist
+  product_name: cinc
+  product_version: 18
+  # log_level: :debug
+
+lifecycle:
+  post_create:
+    - local: echo 'Awaiting cloud-init completion, then reverting security patching'
+    - remote: |
+        declare i=0;
+        declare wait=5;
+        declare timeout=300;
+        while true; do
+          [ -f /var/lib/cloud/instance/boot-finished ] && break;
+          if [ ${i} -ge ${timeout} ]; then
+            echo "Timed out after ${i}s waiting for cloud-init to complete";
+            exit 1;
+          fi;
+          echo "Waited ${i}/${timeout}s for cloud-init to complete, retrying in ${wait} seconds"
+          sleep ${wait};
+          let i+=${wait};
+        done;
+        sudo yum history undo 1 -y || true
+    # Temporary Workaround for rexml issue (https://github.com/ruby/rexml/issues/131)
+    - remote: sudo yum install -y gcc
+
+# provisioner:
+#   name: chef_zero
+#   retry_on_exit_code:
+#     - 35 # 35 is the exit code signaling that the node is rebooting
+#   product_name: chef
+#   product_version: 18
+#   deprecations_as_errors: true
+#   chef_license: accept-no-persist
 
 verifier:
   name: inspec
 
+# platforms:
+#   - name: amazonlinux-2
+  # - name: centos-7
+  # - name: centos-8
+  # - name: debian-10
+  # - name: ubuntu-18.04
+  # - name: ubuntu-20.04
+
 platforms:
-  - name: amazonlinux-2
-  - name: centos-7
-  - name: centos-8
-  - name: debian-10
-  - name: ubuntu-18.04
-  - name: ubuntu-20.04
+  - name: amazon2
+    driver:
+      image_id: <%= tkhelper.get_amazon2_ami %>
 
 suites:
   - name: default

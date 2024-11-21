@@ -48,7 +48,7 @@ action :create do
 
   parameters = new_resource.parameters
 
-  template "/etc/td-agent/conf.d/#{new_resource.filter_name}.conf" do
+  template "/etc/fluent/conf.d/#{new_resource.filter_name}.conf" do
     source 'filter.conf.erb'
     owner 'root'
     group 'root'
@@ -59,10 +59,10 @@ action :create do
       tag: new_resource.tag
     )
     cookbook new_resource.template_source
-    notifies :reload, 'service[td-agent]'
+    notifies :reload, 'service[fluentd]'
   end
 
-  service 'td-agent' do
+  service 'fluentd' do
     supports restart: true, reload: true, status: true
     action [:enable, :start]
   end
@@ -71,13 +71,13 @@ end
 action :delete do
   description 'Removes filter configuration files'
 
-  file "/etc/td-agent/conf.d/#{new_resource.filter_name}.conf" do
+  file "/etc/fluent/conf.d/#{new_resource.filter_name}.conf" do
     action :delete
     only_if { ::File.exist?("/etc/td-agent/conf.d/#{new_resource.filter_name}.conf") }
-    notifies :reload, 'service[td-agent]'
+    notifies :reload, 'service[fluentd]'
   end
 
-  service 'td-agent' do
+  service 'fluentd' do
     supports restart: true, reload: true, status: true
     action [:enable, :start]
   end
