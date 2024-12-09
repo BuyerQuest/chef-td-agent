@@ -1,8 +1,9 @@
 # Version History
 
-## Unreleased
+## 5.0.0
 
-* none
+* Support fluent-package v5
+* Remove support for td-agent < v4
 
 ## 3.2.0
 

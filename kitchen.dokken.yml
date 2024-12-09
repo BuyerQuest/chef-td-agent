@@ -1,14 +1,16 @@
 driver:
   name: dokken
+  chef_image: cincproject/cinc
   privileged: true # because Docker and SystemD/Upstart
-  chef_version: <%= ENV['CHEF_VERSION'] || 'current' %>
-  chef_license: accept-no-persist
+  chef_version: 18
 
 transport:
   name: dokken
 
 provisioner:
   name: dokken
+  product_name: cinc
+  chef_binary: /opt/cinc/bin/cinc-client
 
 verifier:
   name: inspec
@@ -19,23 +21,9 @@ platforms:
       image: dokken/amazonlinux-2
       pid_one_command: /usr/lib/systemd/systemd
 
-  - name: debian-10
-    driver:
-      image: dokken/debian-10
-      pid_one_command: /bin/systemd
-      intermediate_instructions:
-        - RUN /usr/bin/apt-get update
-
-  - name: ubuntu-18.04
-    driver:
-      image: dokken/ubuntu-18.04
-      pid_one_command: /bin/systemd
-      intermediate_instructions:
-        - RUN /usr/bin/apt-get update
-
-  - name: ubuntu-20.04
-    driver:
-      image: dokken/ubuntu-20.04
-      pid_one_command: /bin/systemd
-      intermediate_instructions:
-        - RUN /usr/bin/apt-get update
+suites:
+  - name: default
+    verifier:
+      inspec_tests:
+        - test/integration/default
+    attributes:

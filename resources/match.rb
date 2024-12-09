@@ -18,8 +18,10 @@
 # limitations under the License.
 #
 
+resource_name :fluent_match
+provides :fluent_match
+unified_mode true
 provides :td_agent_match
-resource_name :td_agent_match
 
 description 'Creates matcher configuration files'
 
@@ -35,7 +37,7 @@ property :tag, String,
          required: true,
          description: 'Tag to add to the data'
 
-property :parameters,
+property :parameters, Hash,
          default: {},
          description: 'Additional parameters to pass to the matcher'
 
@@ -48,7 +50,7 @@ action :create do
 
   parameters = new_resource.parameters
 
-  template "/etc/td-agent/conf.d/#{new_resource.match_name}.conf" do
+  template "/etc/#{node['td_agent']['conf_dir_name']}/conf.d/#{new_resource.match_name}.conf" do
     source 'match.conf.erb'
     owner 'root'
     group 'root'
@@ -59,10 +61,10 @@ action :create do
       tag: new_resource.tag
     )
     cookbook new_resource.template_source
-    notifies :reload, 'service[td-agent]'
+    notifies :reload, "service[#{node['td_agent']['service_name']}]"
   end
 
-  service 'td-agent' do
+  service node['td_agent']['service_name'] do
     supports restart: true, reload: true, status: true
     action [:enable, :start]
   end
@@ -71,13 +73,13 @@ end
 action :delete do
   description 'Removes matcher configuration files'
 
-  file "/etc/td-agent/conf.d/#{new_resource.match_name}.conf" do
+  file "/etc/#{node['td_agent']['conf_dir_name']}/conf.d/#{new_resource.match_name}.conf" do
     action :delete
-    only_if { ::File.exist?("/etc/td-agent/conf.d/#{new_resource.match_name}.conf") }
-    notifies :reload, 'service[td-agent]'
+    only_if { ::File.exist?("/etc/#{node['td_agent']['conf_dir_name']}/conf.d/#{new_resource.match_name}.conf") }
+    notifies :reload, "service[#{node['td_agent']['service_name']}]"
   end
 
-  service 'td-agent' do
+  service node['td_agent']['service_name'] do
     supports restart: true, reload: true, status: true
     action [:enable, :start]
   end

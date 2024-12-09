@@ -18,8 +18,10 @@
 # limitations under the License.
 #
 
+resource_name :fluent_plugin
+provides :fluent_plugin
+unified_mode true
 provides :td_agent_plugin
-resource_name :td_agent_plugin
 
 description 'Downloads plugin files locally'
 
@@ -34,7 +36,7 @@ property :url, String,
 action :create do
   description 'Downloads plugin files locally'
 
-  directory '/etc/td-agent/plugin' do
+  directory "/etc/#{node['td_agent']['conf_dir_name']}/plugin" do
     recursive true
     owner 'root'
     group 'root'
@@ -42,7 +44,7 @@ action :create do
     action :create
   end
 
-  remote_file "/etc/td-agent/plugin/#{new_resource.plugin_name}.rb" do
+  remote_file "/etc/#{node['td_agent']['conf_dir_name']}/plugin/#{new_resource.plugin_name}.rb" do
     action :create_if_missing
     owner 'root'
     group 'root'
@@ -54,8 +56,8 @@ end
 action :delete do
   description 'Removes local plugin files'
 
-  file "/etc/td-agent/plugin/#{new_resource.plugin_name}.rb" do
+  file "/etc/#{node['td_agent']['conf_dir_name']}/plugin/#{new_resource.plugin_name}.rb" do
     action :delete
-    only_if { ::File.exist?("/etc/td-agent/plugin/#{new_resource.plugin_name}.rb") }
+    only_if { ::File.exist?("/etc/#{node['td_agent']['conf_dir_name']}/plugin/#{new_resource.plugin_name}.rb") }
   end
 end
