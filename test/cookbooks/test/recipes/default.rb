@@ -5,7 +5,7 @@ td_agent_plugin 'gelf' do
   url 'https://raw.githubusercontent.com/emsearcy/fluent-plugin-gelf/master/lib/fluent/plugin/out_gelf.rb'
 end
 
-td_agent_install '4' do
+td_agent_install node['td_agent']['version'] do
   plugins 'gelf'
   action [:install, :configure]
 end

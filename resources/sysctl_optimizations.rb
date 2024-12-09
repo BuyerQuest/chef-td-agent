@@ -18,8 +18,10 @@
 # limitations under the License.
 #
 
+resource_name :fluent_sysctl_optimizations
+provides :fluent_sysctl_optimizations
+unified_mode true
 provides :td_agent_sysctl_optimizations
-resource_name :td_agent_sysctl_optimizations
 
 description 'Creates sysctl files'
 

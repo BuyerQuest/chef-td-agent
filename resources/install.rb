@@ -1,9 +1,11 @@
 # To learn more about Custom Resources, see https://docs.chef.io/custom_resources/
 #
 # Cookbok Name:: td-agent
-# Resource:: td_agent_install
+# Resource:: fluent_package_install
 #
-# Author:: Corey Hemminger <hemminger@hotmail.com>
+# Authors:
+# Varis Devops Team - govaris.com
+# Corey Hemminger <hemminger@hotmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,14 +20,25 @@
 # limitations under the License.
 #
 
+resource_name :fluent_package_install
+provides :fluent_package_install
 provides :td_agent_install
-resource_name :td_agent_install
+unified_mode true
 
-description 'Installs td-agent and creates default configuration'
+description 'Installs td-agent (v4) or fluent-package (v5+) and creates default configuration'
 
-property :major_version, String,
+property :major_version, [String, Float],
          name_property: true,
-         description: 'Major version of td-agent to install'
+         description: 'Major version to install',
+         callbacks: {
+           'Major version should be 4 or higher' => lambda { |major_version|
+                                                      major_version.to_i >= 4
+                                                    },
+         }
+
+property :lts, [true, false],
+          default: true,
+          description: 'Install LTS release instead of latest'
 
 property :template_source, String,
          default: 'td-agent',
@@ -33,7 +46,7 @@ property :template_source, String,
 
 property :default_config, [true, false],
          default: true,
-         description: 'Set default config in /etc/td-agent/td-agent.conf file'
+         description: 'Set default config in main conf file'
 
 property :in_forward, Hash,
          default: {
@@ -56,42 +69,62 @@ property :plugins, [String, Hash, Array],
          description: 'Plugins to install, fluent-plugin- auto added to plugin name, Hash can be used to specify gem_package options as key value pairs'
 
 action :install do
-  description 'Installs td-agent from repository'
+  description 'Installs fluent-package or td-agent from repository'
 
-  if platform_family?('debian')
-    apt_repository 'treasure-data' do
-      uri "http://packages.treasuredata.com/#{new_resource.major_version}/#{node['platform']}/#{node['lsb']['codename']}/"
-      components ['contrib']
-      key 'https://packages.treasuredata.com/GPG-KEY-td-agent'
+  node.default['td_agent']['version'] = new_resource.major_version.to_s
+  node.default['td_agent']['lts'] = new_resource.lts
+
+  case node['td_agent']['version'].to_i
+  when 4
+    # v4 is td-agent
+    node.default['td_agent']['conf_dir_name'] = 'td-agent'
+    node.default['td_agent']['service_name'] = 'td-agent'
+    node.default['td_agent']['package_name'] = 'td-agent'
+    node.default['td_agent']['gem_binary'] = '/usr/sbin/td-agent-gem'
+
+    case node['platform_family']
+    when 'debian'
+      apt_repository 'treasure-data' do
+        uri "http://packages.treasuredata.com/#{new_resource.major_version}/#{node['platform']}/#{node['lsb']['codename']}/"
+        components ['contrib']
+        key 'https://packages.treasuredata.com/GPG-KEY-td-agent'
+      end
+    when 'rhel', 'amazon'
+      yum_repository 'treasure-data' do
+        description 'TreasureData'
+        baseurl "http://packages.treasuredata.com/#{new_resource.major_version}/#{platform?('amazon') ? 'amazon' : 'redhat'}/#{node['platform_version'].to_i}/$basearch"
+        gpgkey 'https://packages.treasuredata.com/GPG-KEY-td-agent'
+      end
     end
-  else
-    baseurl = case new_resource.major_version
-              when nil?,'1'
-                "http://packages.treasuredata.com/redhat/$basearch"
-              when '2','2.5'
-                "http://packages.treasuredata.com/#{new_resource.major_version}/redhat/$releasever/$basearch"
-              when '3'
-                case node['platform']
-                when 'amazon'
-                  "http://packages.treasuredata.com/#{new_resource.major_version}/#{node['platform']}/2/$releasever/$basearch"
-                else
-                  "http://packages.treasuredata.com/#{new_resource.major_version}/redhat/$releasever/$basearch"
-                end
-              else
-                "http://packages.treasuredata.com/#{new_resource.major_version}/#{platform?('amazon') ? 'amazon' : 'redhat'}/#{node['platform_version'].to_i}/$basearch"
-              end
-    yum_repository 'treasure-data' do
-      description 'TreasureData'
-      baseurl baseurl
-      gpgkey 'https://packages.treasuredata.com/GPG-KEY-td-agent'
+  else # 5+
+    # v5+ is fluent-package
+    node.default['td_agent']['conf_dir_name'] = 'fluent'
+    node.default['td_agent']['service_name'] = 'fluentd'
+    node.default['td_agent']['package_name'] = 'fluent-package'
+    node.default['td_agent']['gem_binary'] = '/usr/sbin/fluent-gem'
+
+    case node['platform_family']
+    when 'debian'
+      node.default['td_agent']['repo_package_name'] = "fluent-#{node['td_agent']['lts'] ? 'lts-' : ''}apt-source"
+      # Repo is distributed as a deb package
+      package "https://packages.treasuredata.com/#{node['td_agent']['lts'] ? 'lts/' : ''}#{node['td_agent']['version']}/#{node['platform']}/#{node['lsb']['codename']}/pool/contrib/f/fluent-#{node['td_agent']['lts'] ? 'lts-' : ''}apt-source/fluent-#{node['td_agent']['lts'] ? 'lts-' : ''}apt-source_2023.7.29-1_all.deb"
+    when 'rhel', 'amazon'
+      yum_repository "fluent-package#{node['td_agent']['lts'] ? '-lts' : ''}" do
+        description "Fluentd Project"
+        baseurl "http://packages.treasuredata.com/#{node['td_agent']['lts'] ? 'lts/' : ''}#{node['td_agent']['version']}/#{platform?('amazon') ? 'amazon' : 'redhat'}/#{node['platform_version'].to_i}/$basearch"
+        gpgkey %w(
+          https://packages.treasuredata.com/GPG-KEY-td-agent
+          https://packages.treasuredata.com/GPG-KEY-fluent-package
+        )
+      end
     end
   end
 
-  package 'td-agent'
+  package node['td_agent']['package_name']
 
-  directory '/etc/td-agent/conf.d' do
-    owner 'td-agent'
-    group 'td-agent'
+  directory "/etc/#{node['td_agent']['conf_dir_name']}/conf.d" do
+    owner node['td_agent']['service_name']
+    group node['td_agent']['service_name']
     mode '0755'
   end
 end
@@ -99,21 +132,22 @@ end
 action :remove do
   description 'Removes td-agent and repository'
 
-  package 'td-agent' do
+  package node['td_agent']['package_name'] do
     action :remove
   end
 
-  directory '/etc/td-agent' do
+  directory "/etc/#{node['td_agent']['conf_dir_name']}" do
     recursive true
     action :delete
   end
 
-  if platform_family?('debian')
-    apt_repository 'treasure-data' do
+  case node['platform_family']
+  when 'debian'
+    package node['td_agent']['repo_package_name'] do
       action :remove
     end
-  else
-    yum_repository 'treasure-data' do
+  when 'rhel', 'amazon'
+    yum_repository "fluent-package#{node['td_agent']['lts'] ? '-lts' : ''}" do
       action :remove
     end
   end
@@ -122,7 +156,7 @@ end
 action :configure do
   description 'Creates default configuration and installs plugins'
 
-  template '/etc/td-agent/td-agent.conf' do
+  template "/etc/#{node['td_agent']['conf_dir_name']}/#{node['td_agent']['service_name']}.conf" do
     cookbook new_resource.template_source
     source 'td-agent.conf.erb'
     variables(
@@ -132,19 +166,19 @@ action :configure do
         in_http: new_resource.in_http,
         api_key: new_resource.api_key
       )
-    notifies :reload, 'service[td-agent]', :delayed
+    notifies :reload, "service[#{node['td_agent']['service_name']}]", :delayed
   end
 
   plugins = Mash.new
   if new_resource.plugins.is_a?(String)
-    plugins[new_resource.plugins] = { gem_binary: '/usr/sbin/td-agent-gem' }
+    plugins[new_resource.plugins] = { gem_binary: node['td_agent']['gem_binary'] }
   elsif new_resource.plugins.is_a?(Array)
     new_resource.plugins&.each do |plugin|
-      plugins[plugin] = { gem_binary: '/usr/sbin/td-agent-gem' }
+      plugins[plugin] = { gem_binary: node['td_agent']['gem_binary'] }
     end
   else
     new_resource.plugins&.each do |name, hash|
-      hash['gem_binary'] ||= '/usr/sbin/td-agent-gem'
+      hash['gem_binary'] ||= node['td_agent']['gem_binary']
       plugins[name] = hash
     end
   end
@@ -153,11 +187,11 @@ action :configure do
       hash&.each do |key, value|
         send(key, value)
       end
-      notifies :restart, 'service[td-agent]', :delayed
+      notifies :restart, "service[#{node['td_agent']['service_name']}]", :delayed
     end
   end
 
-  service 'td-agent' do
+  service node['td_agent']['service_name'] do
     supports restart: true, reload: true, status: true
     action [:enable, :start]
   end

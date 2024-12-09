@@ -1,30 +1,96 @@
 ---
 driver:
-  name: vagrant
+  name: docker
+  # privileged: true
+  tty: true
+  cap_add:
+    # Required by Inspec
+    - SYS_PTRACE
+  run_options:
+    env: 
+      - container=docker
+      - TERM=xterm-256color
+    stop-signal: SIGRTMIN+3
+    tmpfs:
+    #   - /tmp:exec
+      - /run
+  volume:
+    - /sys/fs/cgroup:/sys/fs/cgroup:ro
+
+transport:
+  name: docker
 
 provisioner:
-  name: chef_zero
-  retry_on_exit_code:
-    - 35 # 35 is the exit code signaling that the node is rebooting
-  product_name: chef
-  product_version: 16
-  deprecations_as_errors: true
-  chef_license: accept-no-persist
-
-verifier:
-  name: inspec
+  name: chef_infra
+  product_name: cinc
+  # log_level: :debug
 
 platforms:
   - name: amazonlinux-2
-  - name: centos-7
-  - name: centos-8
-  - name: debian-10
-  - name: ubuntu-18.04
-  - name: ubuntu-20.04
+    driver_config:
+      image: dokken/amazonlinux-2
+      run_command: /usr/lib/systemd/systemd
+      provision_command:
+        # Replace Systemctl with fake docker one
+        - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl.py -o /usr/bin/systemctl
+  # - name: amazonlinux-2023
+  #   driver_config:
+  #     image: dokken/amazonlinux-2023
+  #     run_command: /usr/lib/systemd/systemd
+  #     provision_command:
+  #       # Replace Systemctl with fake docker one
+  #       - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py -o /usr/bin/systemctl
+  # - name: almalinux-9
+  #   driver_config:
+  #     image: dokken/almalinux-9
+  #     run_command: /usr/lib/systemd/systemd
+  #     provision_command:
+  #       # Replace Systemctl with fake docker one
+  #       - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py -o /usr/bin/systemctl
+  # - name: debian-12
+  #   driver_config:
+  #     image: dokken/debian-12
+  #     run_command: /usr/lib/systemd/systemd
+  #     provision_command:
+  #       # Replace Systemctl with fake docker one
+  #       - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py -o /usr/bin/systemctl
+  # - name: oraclelinux-9
+  #   driver_config:
+  #     image: dokken/oraclelinux-9
+  #     run_command: /usr/lib/systemd/systemd
+  #     provision_command:
+  #       # Replace Systemctl with fake docker one
+  #       - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py -o /usr/bin/systemctl
+  # - name: ubuntu-22.04
+  #   driver_config:
+  #     image: dokken/ubuntu-22.04
+  #     run_command: /usr/lib/systemd/systemd
+  #     provision_command:
+  #       # Replace Systemctl with fake docker one
+  #       - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py -o /usr/bin/systemctl
+  # - name: ubuntu-24.04
+  #   driver_config:
+  #     image: dokken/ubuntu-24.04
+  #     run_command: /usr/lib/systemd/systemd
+  #     provision_command:
+  #       # Replace Systemctl with fake docker one
+  #       - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py -o /usr/bin/systemctl
+
+verifier:
+  name: inspec
+  inspec_tests:
+    - test/integration/default
 
 suites:
-  - name: default
-    verifier:
-      inspec_tests:
-        - test/integration/default
+  - name: v4
     attributes:
+      td_agent:
+        version: 4
+    verifier:
+      inputs:
+        td_agent_version: 4
+  - name: v5
+    attributes:
+      td_agent:
+        version: 5
+

@@ -1,0 +1,12 @@
+name: chef-td-agent
+title: td-agent and fluent-package installation test
+maintainer: Varis Devops Team
+license: MIT
+supports:
+  - platform-family: redhat
+  - platform-family: debian
+  - platform-family: amazon
+inputs:
+  - name: td_agent_version
+    type: numeric
+    value: 5
