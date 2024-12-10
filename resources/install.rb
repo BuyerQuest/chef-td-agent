@@ -27,9 +27,13 @@ unified_mode true
 
 description 'Installs td-agent (v4) or fluent-package (v5+) and creates default configuration'
 
-property :major_version, [String, Float],
-         name_property: true,
+property :name, String,
+          description: 'Name of the resource',
+          name_property: true
+
+property :major_version, [String, Float, Integer],
          description: 'Major version to install',
+         default: node['td_agent']['version'],
          callbacks: {
            'Major version should be 4 or higher' => lambda { |major_version|
                                                       major_version.to_i >= 4
@@ -37,7 +41,7 @@ property :major_version, [String, Float],
          }
 
 property :lts, [true, false],
-          default: true,
+          default: node['td_agent']['lts'],
           description: 'Install LTS release instead of latest'
 
 property :template_source, String,
@@ -71,16 +75,16 @@ property :plugins, [String, Hash, Array],
 action :install do
   description 'Installs fluent-package or td-agent from repository'
 
-  node.default['td_agent']['version'] = new_resource.major_version.to_s
-  node.default['td_agent']['lts'] = new_resource.lts
+  node.override['td_agent']['version'] = new_resource.major_version.to_s
+  node.override['td_agent']['lts'] = new_resource.lts
 
   case node['td_agent']['version'].to_i
   when 4
     # v4 is td-agent
-    node.default['td_agent']['conf_dir_name'] = 'td-agent'
-    node.default['td_agent']['service_name'] = 'td-agent'
-    node.default['td_agent']['package_name'] = 'td-agent'
-    node.default['td_agent']['gem_binary'] = '/usr/sbin/td-agent-gem'
+    node.override['td_agent']['conf_dir_name'] = 'td-agent'
+    node.override['td_agent']['service_name'] = 'td-agent'
+    node.override['td_agent']['package_name'] = 'td-agent'
+    node.override['td_agent']['gem_binary'] = '/usr/sbin/td-agent-gem'
 
     case node['platform_family']
     when 'debian'
@@ -98,14 +102,14 @@ action :install do
     end
   else # 5+
     # v5+ is fluent-package
-    node.default['td_agent']['conf_dir_name'] = 'fluent'
-    node.default['td_agent']['service_name'] = 'fluentd'
-    node.default['td_agent']['package_name'] = 'fluent-package'
-    node.default['td_agent']['gem_binary'] = '/usr/sbin/fluent-gem'
+    node.override['td_agent']['conf_dir_name'] = 'fluent'
+    node.override['td_agent']['service_name'] = 'fluentd'
+    node.override['td_agent']['package_name'] = 'fluent-package'
+    node.override['td_agent']['gem_binary'] = '/usr/sbin/fluent-gem'
 
     case node['platform_family']
     when 'debian'
-      node.default['td_agent']['repo_package_name'] = "fluent-#{node['td_agent']['lts'] ? 'lts-' : ''}apt-source"
+      node.override['td_agent']['repo_package_name'] = "fluent-#{node['td_agent']['lts'] ? 'lts-' : ''}apt-source"
       # Repo is distributed as a deb package
       package "https://packages.treasuredata.com/#{node['td_agent']['lts'] ? 'lts/' : ''}#{node['td_agent']['version']}/#{node['platform']}/#{node['lsb']['codename']}/pool/contrib/f/fluent-#{node['td_agent']['lts'] ? 'lts-' : ''}apt-source/fluent-#{node['td_agent']['lts'] ? 'lts-' : ''}apt-source_2023.7.29-1_all.deb"
     when 'rhel', 'amazon'
