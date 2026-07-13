@@ -8,7 +8,7 @@ Introduced: v4.0.0
 
 ## Requires
 
-- Chef >= 13
+- Chef Infra Client or Cinc Client >= 18
 
 ### Actions
 

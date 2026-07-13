@@ -1,7 +1,6 @@
 ---
 driver:
   name: docker
-  # privileged: true
   tty: true
   cap_add:
     # Required by Inspec
@@ -10,71 +9,89 @@ driver:
     env: 
       - container=docker
       - TERM=xterm-256color
-    stop-signal: SIGRTMIN+3
     tmpfs:
-    #   - /tmp:exec
       - /run
+      - /run/lock
   volume:
-    - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    - /sys/fs/cgroup:/sys/fs/cgroup:rw
 
 transport:
   name: docker
 
 provisioner:
-  name: chef_infra
-  product_name: cinc
+  name: cinc_infra
   # log_level: :debug
 
 platforms:
-  - name: amazonlinux-2
+  - name: almalinux-8
     driver_config:
-      image: dokken/amazonlinux-2
+      image: dokken/almalinux-8
       run_command: /usr/lib/systemd/systemd
       provision_command:
-        # Replace Systemctl with fake docker one
-        - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl.py -o /usr/bin/systemctl
-  # - name: amazonlinux-2023
-  #   driver_config:
-  #     image: dokken/amazonlinux-2023
-  #     run_command: /usr/lib/systemd/systemd
-  #     provision_command:
-  #       # Replace Systemctl with fake docker one
-  #       - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py -o /usr/bin/systemctl
-  # - name: almalinux-9
-  #   driver_config:
-  #     image: dokken/almalinux-9
-  #     run_command: /usr/lib/systemd/systemd
-  #     provision_command:
-  #       # Replace Systemctl with fake docker one
-  #       - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py -o /usr/bin/systemctl
-  # - name: debian-12
-  #   driver_config:
-  #     image: dokken/debian-12
-  #     run_command: /usr/lib/systemd/systemd
-  #     provision_command:
-  #       # Replace Systemctl with fake docker one
-  #       - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py -o /usr/bin/systemctl
-  # - name: oraclelinux-9
-  #   driver_config:
-  #     image: dokken/oraclelinux-9
-  #     run_command: /usr/lib/systemd/systemd
-  #     provision_command:
-  #       # Replace Systemctl with fake docker one
-  #       - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py -o /usr/bin/systemctl
-  # - name: ubuntu-22.04
-  #   driver_config:
-  #     image: dokken/ubuntu-22.04
-  #     run_command: /usr/lib/systemd/systemd
-  #     provision_command:
-  #       # Replace Systemctl with fake docker one
-  #       - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py -o /usr/bin/systemctl
-  # - name: ubuntu-24.04
-  #   driver_config:
-  #     image: dokken/ubuntu-24.04
-  #     run_command: /usr/lib/systemd/systemd
-  #     provision_command:
-  #       # Replace Systemctl with fake docker one
-  #       - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/refs/heads/master/files/docker/systemctl3.py -o /usr/bin/systemctl
+        # EL8 uses the compatibility script with its built-in platform Python.
+        - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/eb2a963a7d8413119b432bcb6151af6076b65f84/files/docker/systemctl.py -o /usr/bin/systemctl
+        - echo '60a7700026b4526a0e1d9c04cfe0f53b93d32bb772f2f88a1fb0d32147d0030a  /usr/bin/systemctl' | sha256sum -c -
+        - sed -i '1c#! /usr/libexec/platform-python' /usr/bin/systemctl
+  - name: almalinux-9
+    driver_config:
+      image: dokken/almalinux-9
+      run_command: /usr/lib/systemd/systemd
+      provision_command: &systemctl-replacement
+        - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/80dfcc2090f9d74ae9277e05c1a3d1ae491cfc7d/files/docker/systemctl3.py -o /usr/bin/systemctl
+        - echo 'be4344bef05507bf97246daa9302a54147e3b0b48dcee96dbcb2930e16a9a869  /usr/bin/systemctl' | sha256sum -c -
+  - name: almalinux-10
+    driver_config:
+      image: dokken/almalinux-10
+      run_command: /usr/lib/systemd/systemd
+      provision_command: *systemctl-replacement
+  - name: amazonlinux-2023
+    driver_config:
+      image: dokken/amazonlinux-2023
+      run_command: /usr/lib/systemd/systemd
+      provision_command: *systemctl-replacement
+  - name: oraclelinux-8
+    driver_config:
+      image: dokken/oraclelinux-8
+      run_command: /usr/lib/systemd/systemd
+      provision_command:
+        - curl -fsSL https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/eb2a963a7d8413119b432bcb6151af6076b65f84/files/docker/systemctl.py -o /usr/bin/systemctl
+        - echo '60a7700026b4526a0e1d9c04cfe0f53b93d32bb772f2f88a1fb0d32147d0030a  /usr/bin/systemctl' | sha256sum -c -
+        - sed -i '1c#! /usr/libexec/platform-python' /usr/bin/systemctl
+  - name: oraclelinux-9
+    driver_config:
+      image: dokken/oraclelinux-9
+      run_command: /usr/lib/systemd/systemd
+      provision_command: *systemctl-replacement
+  - name: oraclelinux-10
+    driver_config:
+      image: dokken/oraclelinux-10
+      run_command: /usr/lib/systemd/systemd
+      provision_command: *systemctl-replacement
+  - name: debian-12
+    driver_config:
+      image: dokken/debian-12
+      run_command: /usr/lib/systemd/systemd
+      provision_command: *systemctl-replacement
+  - name: debian-13
+    driver_config:
+      image: dokken/debian-13
+      run_command: /usr/lib/systemd/systemd
+      provision_command: *systemctl-replacement
+  - name: ubuntu-22.04
+    driver_config:
+      image: dokken/ubuntu-22.04
+      run_command: /usr/lib/systemd/systemd
+      provision_command: *systemctl-replacement
+  - name: ubuntu-24.04
+    driver_config:
+      image: dokken/ubuntu-24.04
+      run_command: /usr/lib/systemd/systemd
+      provision_command: *systemctl-replacement
+  - name: ubuntu-26.04
+    driver_config:
+      image: dokken/ubuntu-26.04
+      run_command: /usr/lib/systemd/systemd
+      provision_command: *systemctl-replacement
 
 verifier:
   name: inspec
@@ -82,15 +99,67 @@ verifier:
     - test/integration/default
 
 suites:
-  - name: v4
-    attributes:
-      td_agent:
-        version: 4
-    verifier:
-      inputs:
-        td_agent_version: 4
-  - name: v5
+  - name: v5-cinc18
+    excludes:
+      - debian-12
+      - debian-13
+      - almalinux-10
+      - oraclelinux-10
+      - ubuntu-26.04
+    provisioner:
+      product_version: 18
     attributes:
       td_agent:
         version: 5
-
+        plugins:
+          - gelf
+    verifier:
+      inputs:
+        td_agent_version: 5
+  - name: v5-cinc19
+    excludes:
+      - debian-12
+      - debian-13
+      - almalinux-8
+      - almalinux-10
+      - oraclelinux-8
+      - oraclelinux-10
+      - ubuntu-24.04
+      - ubuntu-26.04
+    provisioner:
+      product_version: 19
+    attributes:
+      td_agent:
+        version: 5
+        plugins:
+          - gelf
+    verifier:
+      inputs:
+        td_agent_version: 5
+  - name: v6-cinc18
+    excludes:
+      - almalinux-8
+      - oraclelinux-8
+    provisioner:
+      product_version: 18
+    attributes:
+      td_agent:
+        version: 6
+        plugins:
+          - gelf
+    verifier:
+      inputs:
+        td_agent_version: 6
+  - name: v6-cinc19
+    excludes:
+      - oraclelinux-8
+    provisioner:
+      product_version: 19
+    attributes:
+      td_agent:
+        version: 6
+        plugins:
+          - gelf
+    verifier:
+      inputs:
+        td_agent_version: 6

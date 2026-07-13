@@ -1,15 +1,19 @@
 source 'https://rubygems.cinc.sh/' do
-  gem 'mixlib-install'
-  gem 'cinc-auditor-bin'
   gem 'chef-cli'
-  gem 'inspec'
+  gem 'inspec-core', '~> 7.0'
+  gem 'mixlib-install'
 end
 
-source "https://rubygems.org"
+source 'https://rubygems.org'
 
-# gem 'berkshelf'
-# gem "kitchen-sync", "~> 2.2"
-# gem 'kitchen-dokken'
-gem 'test-kitchen'
-gem 'kitchen-docker', github: 'RulerOf/kitchen-docker'
+gem 'cookstyle', '= 8.7.6'
+gem 'kitchen-cinc', '~> 1.1'
+gem 'kitchen-docker', github: 'rulerof/kitchen-docker'
 gem 'kitchen-inspec'
+gem 'test-kitchen', '~> 4.0'
+gem 'unf_ext'
+
+# Ruby 3.4+
+gem 'csv', '~> 3.3'
+gem 'openssl', '~> 4.0'
+gem 'syslog', '~> 0.3'

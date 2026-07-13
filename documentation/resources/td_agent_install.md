@@ -2,39 +2,39 @@
 
 # td_agent_install
 
-Installs td-agent and creates default configuration
+Installs Fluent Package v5 or newer and creates the default configuration.
 
 Introduced: v4.0.0
 
 ## Requires
 
-- Chef >= 13
+- Chef Infra Client or Cinc Client >= 18
 
 ### Actions
 
-- `:install` Installs the td-agent from repository
+- `:install` Installs Fluent Package from its repository
 - `:configure` Creates default configuration and installs plugins
-- `:remove` Removes td-agent and repository
+- `:remove` Removes Fluent Package and its repository
 
 ### Properties
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `major_version` | String | name_property | Major version of td-agent to install |
+| `major_version` | String, Float, Integer | `node['td_agent']['version']` | Major version of Fluent Package to install (`5` or `6`) |
+| `lts` | true, false | `node['td_agent']['lts']` | Install the LTS release instead of the current release |
 | `template_source` | String | 'td-agent' | Cookbook to source template from |
-| `default_config` | [true, false] | true | Set default config in /etc/td-agent/td-agent.conf file |
-| `in_forward` | Hash | {port: 24224, bind: '0.0.0.0',} | Port to listen for td-agent forwarded messages |
+| `default_config` | [true, false] | true | Set the default config in /etc/fluent/fluentd.conf |
+| `in_forward` | Hash | {port: 24224, bind: '0.0.0.0',} | Port to listen for forwarded Fluentd messages |
 | `in_http` | Hash | {port: 8888, bind: '0.0.0.0',} | Setup HTTP site for diagnostics |
 | `api_key` | String | nil | Adds api key for td cloud analytics |
 | `plugins` | [String, Hash, Array] | nil | Plugins to install, fluent-plugin- auto added to plugin name, Hash can be used to specify gem_package options as key value pairs |
 
 ### Examples
 
-To install and setup default configuration
+To install the latest Fluent Package v6 LTS release and set up the default configuration:
 
 ```ruby
-# Install AWS Cloudwatch agent
-td_agent_install '4' do
+fluent_package_install 'default' do
   action [:install, :configure]
 end
 ```
@@ -42,8 +42,8 @@ end
 To install, setup default configuration, and install plugins
 
 ```ruby
-# Install AWS Cloudwatch agent
-td_agent_install '4' do
+fluent_package_install 'default' do
+  major_version 6
   plugins 'gelf'
   action [:install, :configure]
 end

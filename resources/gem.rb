@@ -49,17 +49,3 @@ action :delete do
     command "#{node['td_agent']['gem_binary']} uninstall #{new_resource.name} -v #{new_resource.version}"
   end
 end
-
-action_class do
-  def td_plugin_name
-    "fluent-plugin-#{new_resource.package_name}"
-  end
-
-  def major
-    unless @major
-      version = node["td_agent"]["version"]
-      @major = version.nil? ? nil : version.to_s.split('.').first
-    end
-    @major
-  end
-end
