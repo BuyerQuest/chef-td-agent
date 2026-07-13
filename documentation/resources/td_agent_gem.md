@@ -2,13 +2,13 @@
 
 # td_agent_gem
 
-Install a td agent gem using the `td-agent-gem` binary.
+Install a Fluentd gem using the `fluent-gem` binary supplied by Fluent Package.
 
 Introduced: v4.0.0
 
 ## Requires
 
-- Chef >= 13
+- Chef Infra Client or Cinc Client >= 18
 
 ### Actions
 

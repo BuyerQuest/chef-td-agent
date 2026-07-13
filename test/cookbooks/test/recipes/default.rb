@@ -5,10 +5,7 @@ td_agent_plugin 'gelf' do
   url 'https://raw.githubusercontent.com/emsearcy/fluent-plugin-gelf/master/lib/fluent/plugin/out_gelf.rb'
 end
 
-td_agent_install 'test_install' do
-  plugins 'gelf'
-  action [:install, :configure]
-end
+include_recipe 'td-agent::default'
 
 td_agent_source 'test_in_tail' do
   type 'tail'
@@ -48,7 +45,7 @@ td_agent_filter 'test_filter' do
   tag 'webserver.*'
   parameters(
     record: [
-      { host_param: "#{Socket.gethostname}" },
+      { host_param: Socket.gethostname },
     ]
   )
 end

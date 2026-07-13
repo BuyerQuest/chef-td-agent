@@ -1,22 +1,25 @@
 control 'td-agent-install' do
   impact 'high'
-  title 'td-agent / fluent-package installation'
-  desc 'Ensure td-agent or fluent-package is installed and running'
+  title 'fluent-package installation'
+  desc 'Ensure fluent-package is installed and running'
 
   conf_dir_name = 'fluent'
   service_name  = 'fluentd'
   package_name  = 'fluent-package'
   gem_binary    = '/usr/sbin/fluent-gem'
-
-  if input('td_agent_version') == 4
-    conf_dir_name = 'td-agent'
-    service_name  = 'td-agent'
-    package_name  = 'td-agent'
-    gem_binary    = '/usr/sbin/td-agent-gem'
-  end
+  service_user  = os.family == 'debian' ? '_fluentd' : 'fluentd'
 
   describe package(package_name) do
     it { should be_installed }
+    its('version') { should match(/^#{input('td_agent_version')}\./) }
+  end
+
+  if input('td_agent_version') == 6
+    lts_repository_package = os.family == 'debian' ? 'fluent-lts-apt-source' : 'fluent-lts-release'
+
+    describe package(lts_repository_package) do
+      it { should be_installed }
+    end
   end
 
   describe service(service_name) do
@@ -36,6 +39,7 @@ control 'td-agent-install' do
 
   describe file("/etc/#{conf_dir_name}/conf.d") do
     it { should be_directory }
+    its('owner') { should eq service_user }
     its('mode') { should cmp '0755' }
   end
 

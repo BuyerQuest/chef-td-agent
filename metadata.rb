@@ -1,10 +1,10 @@
 name             'td-agent'
-maintainer       'Varis DevOps Team'
+maintainer       'BuyerQuest DevOps Team'
 license          'Apache-2.0'
-description      'Installs/Configures fluent-package and td-agent'
-version          '5.0.1'
+description      'Installs and configures fluent-package'
+version          '6.0.0'
 
-chef_version     '>= 13'
+chef_version     '>= 18'
 issues_url       'https://github.com/buyerquest/chef-td-agent/issues'
 source_url       'https://github.com/buyerquest/chef-td-agent'
 
