@@ -120,8 +120,17 @@ action :install do
         source "https://fluentd.cdn.cncf.io/#{repo_path}/#{platform}/#{node['platform_version'].to_i}/#{node['kernel']['machine']}/#{repo_package_file}"
       end
 
+      # Installing the release RPM adds a repository after Chef's package
+      # helper has already loaded its repository metadata. Using the generic
+      # package resource selects the DNF or Yum provider for the current OS;
+      # :flush_cache refreshes that provider's persistent helper.
+      package 'fluent-package-repository-cache' do
+        action :nothing
+      end
+
       rpm_package node['td_agent']['repo_package_name'] do
         source repo_package_path
+        notifies :flush_cache, 'package[fluent-package-repository-cache]', :immediately
       end
     end
   else
