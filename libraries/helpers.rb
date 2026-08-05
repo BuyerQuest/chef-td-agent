@@ -9,7 +9,7 @@ module TdAgent
           body += params_to_text(param_value)
           body += "</#{param_key}>\n"
         elsif param_value.is_a?(Array)
-          body += if param_value.all? { |array_value| array_value.is_a?(Hash) }
+          body += if param_value.all?(Hash)
                     param_value.map do |array_value|
                       "<#{param_key}>\n#{params_to_text(array_value)}</#{param_key}>\n"
                     end.join

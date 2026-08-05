@@ -8,7 +8,7 @@ td_agent_filter '01_filter' do
   tag 'test'
   parameters(
     record: {
-      hostname: "#{Socket.gethostname}",
+      hostname: Socket.gethostname.to_s,
       tag: '${tag}',
     }
   )
