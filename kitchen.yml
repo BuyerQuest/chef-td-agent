@@ -138,7 +138,6 @@ suites:
         td_agent_version: 5
   - name: v6-cinc18
     excludes:
-      - almalinux-8
       - oraclelinux-8
     provisioner:
       product_version: 18
