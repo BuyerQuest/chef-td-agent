@@ -88,13 +88,13 @@ td_agent_filter 'test_filter' do
   if TdAgent::Helpers.apply_params_kludge?
     params(
       record: [
-        { host_param: "#{Socket.gethostname}" },
+        { host_param: Socket.gethostname.to_s },
       ]
     )
   else
     parameters(
       record: [
-        { host_param: "#{Socket.gethostname}" },
+        { host_param: Socket.gethostname.to_s },
       ]
     )
   end
